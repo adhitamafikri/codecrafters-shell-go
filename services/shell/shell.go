@@ -67,7 +67,7 @@ func (s *shell) handleGracefulShutdown() {
 		panic(err)
 	}
 
-	fmt.Println("Bye...")
+	// fmt.Println("Bye...")
 
 	// Emit Termination Signal
 	err = p.Signal(syscall.SIGTERM)
