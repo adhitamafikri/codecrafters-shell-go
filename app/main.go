@@ -7,32 +7,36 @@ import (
 // Ensures gofmt doesn't remove the "fmt" import in stage 1 (feel free to remove this!)
 var _ = fmt.Print
 
-var commands = map[string]string{
+var commandRegistry = map[string]string{
 	"xyz":  "xyz",
 	"echo": "echo",
 	"cd":   "cd",
+	"exit": "exit",
 }
 
-func GetCommand(inputCommand string) (string, error) {
-	val, ok := commands[inputCommand]
+func GetCommand(input string) (string, error) {
+	val, ok := commandRegistry[input]
 	if !ok {
-		return "", fmt.Errorf("%s: command not found", inputCommand)
+		return "", fmt.Errorf("%s: command not found", input)
 	}
 
 	return val, nil
 }
 
 func main() {
-	fmt.Print("$ ")
+	// REPL
+	for {
+		fmt.Print("$ ")
 
-	var command = ""
-	fmt.Scan(&command)
+		var command = ""
+		fmt.Scan(&command)
 
-	cmd, err := GetCommand(command)
-	if err != nil {
-		fmt.Print(err)
-		return
+		cmd, err := GetCommand(command)
+		if err != nil {
+			fmt.Print(err, "\n")
+
+		} else {
+			fmt.Print(cmd, "\n")
+		}
 	}
-
-	fmt.Print(cmd)
 }
