@@ -3,7 +3,6 @@ package shell
 import (
 	"fmt"
 	"os"
-	"syscall"
 )
 
 var commandRegistry = map[string]string{
@@ -62,16 +61,18 @@ func (s *shell) commandHandler(command string) {
 
 func (s *shell) handleGracefulShutdown() {
 	// Find current running process
-	p, err := os.FindProcess(os.Getpid())
-	if err != nil {
-		panic(err)
-	}
+	// p, err := os.FindProcess(os.Getpid())
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	// fmt.Println("Bye...")
 
 	// Emit Termination Signal
-	err = p.Signal(syscall.SIGTERM)
-	if err != nil {
-		fmt.Println("Failed to send termination signal.", err)
-	}
+	// err = p.Signal(syscall.SIGTERM)
+	// if err != nil {
+	// 	fmt.Println("Failed to send termination signal.", err)
+	// }
+
+	os.Exit(0)
 }
