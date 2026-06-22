@@ -74,5 +74,6 @@ func (s *shell) handleGracefulShutdown() {
 	// 	fmt.Println("Failed to send termination signal.", err)
 	// }
 
+	// Straightforward way to exit the process
 	os.Exit(0)
 }
