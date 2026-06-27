@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -27,6 +28,7 @@ type Shell interface {
 	getCommandAndArgs(input string) (string, []string, error)
 	handleInputBuiltin(input string)
 	handleTypeBuiltin(args []string)
+	handleNonBuiltin(args []string)
 	handleEchoBuiltin(args []string)
 	handleGracefulShutdown()
 }
@@ -109,11 +111,24 @@ func (s *shell) handleInputBuiltin(input string) error {
 func (s *shell) handleTypeBuiltin(args []string) {
 	cmd, _, err := s.getCommandAndArgs(args[0])
 	if err != nil {
-		fmt.Printf("%s: not found\n", args[0])
+		s.handleNonBuiltin(args)
 		return
 	}
 
 	fmt.Printf("%s is a shell builtin\n", cmd)
+}
+
+func (s *shell) handleNonBuiltin(args []string) {
+	arg := args[0]
+	path, err := exec.LookPath(arg)
+
+	if err != nil {
+		fmt.Printf("%s: not found\n", args)
+		return
+	}
+
+	fmt.Printf("%s is %s\n", arg, path)
+
 }
 
 func (s *shell) handleEchoBuiltin(args []string) {
