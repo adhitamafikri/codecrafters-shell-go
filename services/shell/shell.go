@@ -7,11 +7,14 @@ import (
 	"strings"
 )
 
-var commandRegistry = map[string]string{
-	"xyz":  "xyz",
-	"echo": "echo",
-	"cd":   "cd",
-	"exit": "exit",
+var commandRegistry = map[string]map[string]string{
+	"builtin": {
+		"xyz":  "xyz",
+		"type": "type",
+		"echo": "echo",
+		"cd":   "cd",
+		"exit": "exit",
+	},
 }
 
 type shell struct {
@@ -21,10 +24,10 @@ type shell struct {
 type Shell interface {
 	Bootstrap()
 	getInput() string
-	getCommand(input string) (string, error)
-	getArgs(input string) []string
-	handleInput(input string)
-	handleEcho(args []string)
+	getCommandAndArgs(input string) (string, []string, error)
+	handleInputBuiltin(input string)
+	handleTypeBuiltin(args []string)
+	handleEchoBuiltin(args []string)
 	handleGracefulShutdown()
 }
 
@@ -40,10 +43,14 @@ func (s *shell) Bootstrap() {
 		if err != nil {
 			fmt.Print(err, "\n")
 		} else {
-			err = s.handleInput(input)
+			trimmedInput := strings.TrimSpace(input)
 
-			if err != nil {
-				fmt.Println(err)
+			if len(trimmedInput) > 0 {
+				err = s.handleInputBuiltin(trimmedInput)
+
+				if err != nil {
+					fmt.Println(err)
+				}
 			}
 		}
 	}
@@ -60,43 +67,37 @@ func (s *shell) getInput() (string, error) {
 	return input, nil
 }
 
-func (s *shell) getCommand(input string) (string, error) {
-	splitResult := strings.Split(strings.TrimSpace(input), " ")
-	command := strings.TrimSpace(splitResult[0])
+func (s *shell) getCommandAndArgs(input string) (string, []string, error) {
+	splitResult := strings.Split(input, " ")
+	command := splitResult[0]
 
-	val, ok := commandRegistry[command]
+	cmd, ok := commandRegistry["builtin"][command]
 	if !ok {
-		return "", fmt.Errorf("%s: command not found", command)
+		return "", []string{}, fmt.Errorf("%s: command not found", command)
 	}
-
-	return val, nil
-}
-
-func (s *shell) getArgs(input string) []string {
-	splitResult := strings.Split(strings.TrimSpace(input), " ")
 
 	var args []string
 	if len(splitResult) > 1 {
 		args = splitResult[1:]
 	}
 
-	return args
+	return cmd, args, nil
 }
 
 // Note: Orchestrator function, responsible for: extracting command from input, extracting values from input, routing to appropriate handler
-func (s *shell) handleInput(input string) error {
-	command, err := s.getCommand(input)
+func (s *shell) handleInputBuiltin(input string) error {
+	cmd, args, err := s.getCommandAndArgs(input)
 
 	if err != nil {
 		return err
 	}
 
-	args := s.getArgs(input)
-
-	switch command {
-	case commandRegistry["echo"]:
-		s.handleEcho(args)
-	case commandRegistry["exit"]:
+	switch cmd {
+	case commandRegistry["builtin"]["type"]:
+		s.handleTypeBuiltin(args)
+	case commandRegistry["builtin"]["echo"]:
+		s.handleEchoBuiltin(args)
+	case commandRegistry["builtin"]["exit"]:
 		s.handleGracefulShutdown()
 	default:
 		fmt.Println("Unimplemented...")
@@ -105,7 +106,17 @@ func (s *shell) handleInput(input string) error {
 	return nil
 }
 
-func (s *shell) handleEcho(args []string) {
+func (s *shell) handleTypeBuiltin(args []string) {
+	cmd, _, err := s.getCommandAndArgs(args[0])
+	if err != nil {
+		fmt.Printf("%s: not found\n", args[0])
+		return
+	}
+
+	fmt.Printf("%s is a shell builtin\n", cmd)
+}
+
+func (s *shell) handleEchoBuiltin(args []string) {
 	length := len(args)
 
 	for idx, arg := range args {
