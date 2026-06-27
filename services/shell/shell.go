@@ -123,7 +123,7 @@ func (s *shell) handleNonBuiltin(args []string) {
 	path, err := exec.LookPath(arg)
 
 	if err != nil {
-		fmt.Printf("%s: not found\n", args)
+		fmt.Printf("%s: not found\n", arg)
 		return
 	}
 
