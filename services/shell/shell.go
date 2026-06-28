@@ -157,7 +157,7 @@ func (s *shell) handleNonBuiltin(cmd string, args []string) {
 	if err != nil {
 		fmt.Printf("Failed to execute %s command\n", cmd)
 	} else {
-		fmt.Printf("%s\n", out)
+		fmt.Printf("%s", out)
 	}
 
 }
