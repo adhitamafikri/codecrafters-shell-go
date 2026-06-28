@@ -102,7 +102,8 @@ func (s *shell) handleInputBuiltin(input string) error {
 	case commandRegistry["builtin"]["exit"]:
 		s.handleGracefulShutdown()
 	default:
-		fmt.Println("Unimplemented...")
+		// fmt.Println("Unimplemented...")
+		s.handleNonBuiltin(args)
 	}
 
 	return nil
