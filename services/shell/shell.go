@@ -25,10 +25,11 @@ type shell struct {
 type Shell interface {
 	Bootstrap()
 	getInput() string
-	getCommandAndArgs(input string) (string, []string, error)
-	handleInputBuiltin(input string)
+	getCommandAndArgs(input string) (cmd string, args []string, isBuiltin bool)
+	getExecutablePath(arg string) (string, error)
+	handleInput(input string)
 	handleTypeBuiltin(args []string)
-	handleNonBuiltin(args []string)
+	handleNonBuiltin(cmd string, args []string)
 	handleEchoBuiltin(args []string)
 	handleGracefulShutdown()
 }
@@ -48,7 +49,7 @@ func (s *shell) Bootstrap() {
 			trimmedInput := strings.TrimSpace(input)
 
 			if len(trimmedInput) > 0 {
-				err = s.handleInputBuiltin(trimmedInput)
+				err = s.handleInput(trimmedInput)
 
 				if err != nil {
 					fmt.Println(err)
@@ -69,66 +70,95 @@ func (s *shell) getInput() (string, error) {
 	return input, nil
 }
 
-func (s *shell) getCommandAndArgs(input string) (string, []string, error) {
+func (s *shell) getCommandAndArgs(input string) (cmd string, args []string, isBuiltin bool) {
 	splitResult := strings.Split(input, " ")
 	command := splitResult[0]
 
 	cmd, ok := commandRegistry["builtin"][command]
-	if !ok {
-		return "", []string{}, fmt.Errorf("%s: command not found", command)
+	if ok {
+		isBuiltin = true
+	} else {
+		cmd = command
+		isBuiltin = false
 	}
 
-	var args []string
 	if len(splitResult) > 1 {
 		args = splitResult[1:]
 	}
 
-	return cmd, args, nil
+	return cmd, args, isBuiltin
+}
+
+func (s *shell) getExecutablePath(arg string) (string, error) {
+	path, err := exec.LookPath(arg)
+
+	if err != nil {
+		return "", fmt.Errorf("%s: not found", arg)
+	}
+
+	return path, nil
 }
 
 // Note: Orchestrator function, responsible for: extracting command from input, extracting values from input, routing to appropriate handler
-func (s *shell) handleInputBuiltin(input string) error {
-	cmd, args, err := s.getCommandAndArgs(input)
+func (s *shell) handleInput(input string) error {
+	cmd, args, isBuiltin := s.getCommandAndArgs(input)
 
-	if err != nil {
-		return err
-	}
-
-	switch cmd {
-	case commandRegistry["builtin"]["type"]:
-		s.handleTypeBuiltin(args)
-	case commandRegistry["builtin"]["echo"]:
-		s.handleEchoBuiltin(args)
-	case commandRegistry["builtin"]["exit"]:
-		s.handleGracefulShutdown()
-	default:
-		// fmt.Println("Unimplemented...")
-		s.handleNonBuiltin(args)
+	if isBuiltin {
+		switch cmd {
+		case commandRegistry["builtin"]["type"]:
+			s.handleTypeBuiltin(args)
+		case commandRegistry["builtin"]["echo"]:
+			s.handleEchoBuiltin(args)
+		case commandRegistry["builtin"]["exit"]:
+			s.handleGracefulShutdown()
+		default:
+			fmt.Println("Unimplemented...")
+		}
+	} else {
+		s.handleNonBuiltin(cmd, args)
 	}
 
 	return nil
 }
 
 func (s *shell) handleTypeBuiltin(args []string) {
-	cmd, _, err := s.getCommandAndArgs(args[0])
-	if err != nil {
-		s.handleNonBuiltin(args)
+	if len(args) == 0 {
+		fmt.Println("Not enough arguments provided for type builtin")
+		return
+	}
+
+	cmd, _, isBuiltin := s.getCommandAndArgs(args[0])
+	if !isBuiltin {
+		path, err := s.getExecutablePath(args[0])
+		if err != nil {
+			fmt.Printf("%s: not found\n", args[0])
+			return
+		}
+
+		fmt.Printf("%s is %s\n", args[0], path)
 		return
 	}
 
 	fmt.Printf("%s is a shell builtin\n", cmd)
 }
 
-func (s *shell) handleNonBuiltin(args []string) {
-	arg := args[0]
-	path, err := exec.LookPath(arg)
+// This method is responsible for executing a program, just like what we usually do on our terminal
+// Example: 'hx ~/.claude/config', 'cowsay "hey" | lolcat', 'ls -lah', .etc
+func (s *shell) handleNonBuiltin(cmd string, args []string) {
+	_, err := s.getExecutablePath(cmd)
 
 	if err != nil {
-		fmt.Printf("%s: not found\n", arg)
+		fmt.Printf("%s: not found\n", cmd)
 		return
 	}
 
-	fmt.Printf("%s is %s\n", arg, path)
+	// Define the command, execute, and capture the output
+	out, err := exec.Command(cmd, args...).Output()
+	if err != nil {
+		fmt.Printf("Failed to execute %s command\n", cmd)
+	} else {
+		fmt.Printf("%s\n", out)
+	}
 
 }
 
