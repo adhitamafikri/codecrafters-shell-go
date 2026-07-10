@@ -14,6 +14,7 @@ var commandRegistry = map[string]map[string]string{
 		"type": "type",
 		"echo": "echo",
 		"cd":   "cd",
+		"pwd":  "pwd",
 		"exit": "exit",
 	},
 }
@@ -31,6 +32,7 @@ type Shell interface {
 	handleTypeBuiltin(args []string)
 	handleNonBuiltin(cmd string, args []string)
 	handleEchoBuiltin(args []string)
+	handlePwdBuiltin() string
 	handleGracefulShutdown()
 }
 
@@ -109,6 +111,8 @@ func (s *shell) handleInput(input string) error {
 			s.handleTypeBuiltin(args)
 		case commandRegistry["builtin"]["echo"]:
 			s.handleEchoBuiltin(args)
+		case commandRegistry["builtin"]["pwd"]:
+			s.handlePwdBuiltin()
 		case commandRegistry["builtin"]["exit"]:
 			s.handleGracefulShutdown()
 		default:
@@ -174,6 +178,16 @@ func (s *shell) handleEchoBuiltin(args []string) {
 	}
 
 	fmt.Print("\n")
+}
+
+func (s *shell) handlePwdBuiltin() {
+	dir, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Failed to get current working directory")
+		return
+	}
+
+	fmt.Println(dir)
 }
 
 func (s *shell) handleGracefulShutdown() {
