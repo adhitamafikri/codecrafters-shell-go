@@ -200,8 +200,17 @@ func (s *shell) handleCdBuiltin(args []string) {
 	}
 
 	dir := args[0]
-	err := os.Chdir(dir)
 
+	if dir == "~" {
+		d, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Println("Failed to get home directory")
+			return
+		}
+		dir = d
+	}
+
+	err := os.Chdir(dir)
 	if err != nil {
 		fmt.Printf("cd: %s: No such file or directory\n", dir)
 	}
