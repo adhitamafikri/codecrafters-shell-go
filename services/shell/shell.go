@@ -33,6 +33,7 @@ type Shell interface {
 	handleNonBuiltin(cmd string, args []string)
 	handleEchoBuiltin(args []string)
 	handlePwdBuiltin() string
+	handleCdBuiltin(args []string)
 	handleGracefulShutdown()
 }
 
@@ -113,6 +114,8 @@ func (s *shell) handleInput(input string) error {
 			s.handleEchoBuiltin(args)
 		case commandRegistry["builtin"]["pwd"]:
 			s.handlePwdBuiltin()
+		case commandRegistry["builtin"]["cd"]:
+			s.handleCdBuiltin(args)
 		case commandRegistry["builtin"]["exit"]:
 			s.handleGracefulShutdown()
 		default:
@@ -188,6 +191,20 @@ func (s *shell) handlePwdBuiltin() {
 	}
 
 	fmt.Println(dir)
+}
+
+func (s *shell) handleCdBuiltin(args []string) {
+	if len(args) == 0 {
+		fmt.Println("Not enough arguments provided")
+		return
+	}
+
+	dir := args[0]
+	err := os.Chdir(dir)
+
+	if err != nil {
+		fmt.Printf("cd: %s: No such file or directory\n", dir)
+	}
 }
 
 func (s *shell) handleGracefulShutdown() {
