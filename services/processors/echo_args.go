@@ -35,7 +35,7 @@ func ProcessEchoArgs(args []string) string {
 				tempQuotedArg = ""
 			} else if foundPrefixSq && foundSuffixSq {
 				lArg := len(args[i])
-				bucket = append(bucket, args[i][0:lArg-1])
+				bucket = append(bucket, args[i][1:lArg-1])
 			} else {
 				if args[i] != "" {
 					bucket = append(bucket, args[i])
@@ -53,7 +53,7 @@ func ProcessEchoArgs(args []string) string {
 				bucket = append(bucket, args[i][0:lArg-1])
 			} else if foundPrefixSq && foundSuffixSq {
 				lArg := len(args[i])
-				bucket = append(bucket, args[i][0:lArg-1])
+				bucket = append(bucket, args[i][1:lArg-1])
 			} else {
 				bucket = append(bucket, args[i])
 			}
