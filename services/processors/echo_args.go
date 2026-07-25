@@ -37,6 +37,7 @@ func ProcessEchoArgs(args []string) string {
 				lArg := len(args[i])
 				bucket = append(bucket, args[i][1:lArg-1])
 			} else {
+				// push to bucket as long as it's not a whitespace character
 				if args[i] != "" {
 					bucket = append(bucket, args[i])
 				}
@@ -64,9 +65,9 @@ func ProcessEchoArgs(args []string) string {
 	lBucket := len(bucket)
 	for idx, item := range bucket {
 		if idx < lBucket {
-			result += item + " "
+			result += strings.ReplaceAll(item, "'", "") + " "
 		} else {
-			result += item
+			result += strings.ReplaceAll(item, "'", "")
 		}
 	}
 
