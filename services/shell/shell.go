@@ -89,6 +89,7 @@ func (s *shell) parseShellInput(input string) (cmd string, args []string, isBuil
 	// 3. Any args having single quotes without any value between them must be removed, the rest of args must be concatenated as is
 	// 4. Any args having single quotes with any value between them must be retained as is. No missing spaces, signs, characters, .etc
 
+	fmt.Println("the raw args:", args)
 	length := len(args)
 
 	foundPrefixSq, foundSuffixSq := false, false
@@ -229,15 +230,40 @@ func (s *shell) handleNonBuiltin(cmd string, args []string) {
 
 func (s *shell) handleEchoBuiltin(args []string) {
 	result := ""
-	lArgs := len(args)
-	for id, item := range args {
-		if id < lArgs {
-			result += strings.ReplaceAll(item, "'", "") + " "
+	isOpening := false
+
+	// sanitizing the args first
+	var bucket []string
+	for _, item := range args {
+		hasPrefixSq := strings.HasPrefix(item, "'")
+		hasSuffixSq := strings.HasSuffix(item, "'")
+
+		if hasPrefixSq && hasSuffixSq {
+			// result += strings.ReplaceAll(item, "'", "")
+			bucket = append(bucket, strings.ReplaceAll(item, "'", ""))
+		} else if hasPrefixSq && !hasSuffixSq {
+			isOpening = true
+			// result += strings.ReplaceAll(item, "'", "")
+			bucket = append(bucket, strings.ReplaceAll(item, "'", ""))
+		} else if !hasPrefixSq && hasSuffixSq {
+			isOpening = false
+			bucket = append(bucket, strings.ReplaceAll(item, "'", ""))
 		} else {
-			result += strings.ReplaceAll(item, "'", "")
+			if item == "" {
+				if isOpening {
+					bucket = append(bucket, item)
+				}
+			} else {
+				bucket = append(bucket, strings.ReplaceAll(item, "'", ""))
+			}
 		}
 	}
-	fmt.Printf("%s\n", result)
+
+	// Concatenating
+	for _, item := range bucket {
+		result += item + " "
+	}
+	fmt.Printf("%s\n", strings.TrimSuffix(result, " "))
 }
 
 func (s *shell) handlePwdBuiltin() {
