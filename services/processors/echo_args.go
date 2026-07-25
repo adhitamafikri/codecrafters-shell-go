@@ -1,7 +1,6 @@
 package processors
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -62,7 +61,6 @@ func ProcessEchoArgs(args []string) string {
 	}
 
 	result := ""
-	fmt.Println("Bucket:", bucket)
 	lBucket := len(bucket)
 	for idx, item := range bucket {
 		if idx < lBucket {
