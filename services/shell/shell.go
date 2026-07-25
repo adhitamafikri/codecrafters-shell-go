@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/codecrafters-io/shell-starter-go/services/processors"
 )
 
 var commandRegistry = map[string]map[string]string{
@@ -170,17 +172,8 @@ func (s *shell) handleNonBuiltin(cmd string, args []string) {
 }
 
 func (s *shell) handleEchoBuiltin(args []string) {
-	length := len(args)
-
-	for idx, arg := range args {
-		if idx != length-1 {
-			fmt.Printf("%s ", arg)
-		} else {
-			fmt.Print(arg)
-		}
-	}
-
-	fmt.Print("\n")
+	result := processors.ProcessEchoArgs(args)
+	fmt.Printf("%s\n", result)
 }
 
 func (s *shell) handlePwdBuiltin() {
