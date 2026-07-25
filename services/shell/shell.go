@@ -89,7 +89,6 @@ func (s *shell) parseShellInput(input string) (cmd string, args []string, isBuil
 	// 3. Any args having single quotes without any value between them must be removed, the rest of args must be concatenated as is
 	// 4. Any args having single quotes with any value between them must be retained as is. No missing spaces, signs, characters, .etc
 
-	fmt.Println("the raw args:", args)
 	length := len(args)
 
 	foundPrefixSq, foundSuffixSq := false, false
