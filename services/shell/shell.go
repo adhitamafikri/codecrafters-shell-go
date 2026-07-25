@@ -224,11 +224,9 @@ func (s *shell) handleNonBuiltin(cmd string, args []string) {
 	} else {
 		fmt.Printf("%s", out)
 	}
-
 }
 
 func (s *shell) handleEchoBuiltin(args []string) {
-	result := ""
 	isOpening := false
 
 	// sanitizing the args first
@@ -238,11 +236,9 @@ func (s *shell) handleEchoBuiltin(args []string) {
 		hasSuffixSq := strings.HasSuffix(item, "'")
 
 		if hasPrefixSq && hasSuffixSq {
-			// result += strings.ReplaceAll(item, "'", "")
 			bucket = append(bucket, strings.ReplaceAll(item, "'", ""))
 		} else if hasPrefixSq && !hasSuffixSq {
 			isOpening = true
-			// result += strings.ReplaceAll(item, "'", "")
 			bucket = append(bucket, strings.ReplaceAll(item, "'", ""))
 		} else if !hasPrefixSq && hasSuffixSq {
 			isOpening = false
@@ -258,11 +254,7 @@ func (s *shell) handleEchoBuiltin(args []string) {
 		}
 	}
 
-	// Concatenating
-	for _, item := range bucket {
-		result += item + " "
-	}
-	fmt.Printf("%s\n", strings.TrimSuffix(result, " "))
+	fmt.Printf("%s\n", strings.Join(bucket, " "))
 }
 
 func (s *shell) handlePwdBuiltin() {
