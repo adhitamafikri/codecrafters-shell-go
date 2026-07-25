@@ -76,8 +76,7 @@ func (s *shell) getInput() (string, error) {
 }
 
 func (s *shell) getCommandAndArgs(input string) (cmd string, args []string, isBuiltin bool) {
-	splitResult := strings.Split(input, " ")
-	command := splitResult[0]
+	command, args := processors.ParseShellInput(input)
 
 	cmd, ok := commandRegistry["builtin"][command]
 	if ok {
@@ -85,10 +84,6 @@ func (s *shell) getCommandAndArgs(input string) (cmd string, args []string, isBu
 	} else {
 		cmd = command
 		isBuiltin = false
-	}
-
-	if len(splitResult) > 1 {
-		args = splitResult[1:]
 	}
 
 	return cmd, args, isBuiltin
