@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"unicode"
 )
 
 var commandRegistry = map[string]map[string]string{
@@ -25,8 +26,8 @@ type shell struct {
 
 type Shell interface {
 	Bootstrap()
-	getInput() string
-	parseShellInput(input string) (cmd string, args []string, isBuiltin bool)
+	getInput() (string, error)
+	parseShellInput(input string) (cmd string, args []string, isBuiltin bool, err error)
 	getExecutablePath(arg string) (string, error)
 	handleInput(input string)
 	handleTypeBuiltin(args []string)
@@ -73,81 +74,43 @@ func (s *shell) getInput() (string, error) {
 	return input, nil
 }
 
-func (s *shell) parseShellInput(input string) (cmd string, args []string, isBuiltin bool) {
-	spaceIndex := strings.Index(input, " ")
-	if spaceIndex == -1 {
-		_, ok := commandRegistry["builtin"][input]
-		return input, []string{}, ok
-	}
+func (s *shell) parseShellInput(input string) (cmd string, args []string, isBuiltin bool, err error) {
+	var words []string
+	var word strings.Builder
+	inSingleQuotes := false
+	wordStarted := false
 
-	cmd = input[0:spaceIndex]
-	args = strings.Split(input[spaceIndex+1:], " ")
-
-	// Arg rules:
-	// 1. Any args having ONLY single quote must error
-	// 2. Args without single quotes must treated as trimmed values, no trailing, leading, or empty whitespaces spaces, except whitespace given from the end-printing logic
-	// 3. Any args having single quotes without any value between them must be removed, the rest of args must be concatenated as is
-	// 4. Any args having single quotes with any value between them must be retained as is. No missing spaces, signs, characters, .etc
-
-	length := len(args)
-
-	foundPrefixSq, foundSuffixSq := false, false
-	tempQuotedArg := ""
-	var bucket []string
-
-	// Example args: 'hello     this world' belongs''to me     'tanja' i love'tanja'much
-	// Expected result: hello      this world belongsto me tanja i lovetanjamuch
-
-	for i := 0; i < length; i++ {
-		// Check has prefix and suffix sq
-		foundPrefixSq = strings.HasPrefix(args[i], "'")
-		foundSuffixSq = strings.HasSuffix(args[i], "'")
-
-		if len(tempQuotedArg) == 0 {
-			if foundPrefixSq && !foundSuffixSq {
-				tempQuotedArg = args[i][1:]
-				bucket = append(bucket, tempQuotedArg)
-			} else if !foundPrefixSq && foundSuffixSq {
-				lArg := len(args[i])
-				bucket = append(bucket, args[i][0:lArg-1])
-				tempQuotedArg = ""
-			} else if foundPrefixSq && foundSuffixSq {
-				lArg := len(args[i])
-				bucket = append(bucket, args[i][1:lArg-1])
-			} else {
-				// push to bucket as long as it's not a whitespace character
-				if args[i] != "" {
-					bucket = append(bucket, args[i])
-				}
+	for _, char := range input {
+		switch {
+		case char == '\'':
+			inSingleQuotes = !inSingleQuotes
+			wordStarted = true
+		case unicode.IsSpace(char) && !inSingleQuotes:
+			if wordStarted {
+				words = append(words, word.String())
+				word.Reset()
+				wordStarted = false
 			}
-		} else {
-			// Things to do when we have an opening value of quoted args
-			if foundPrefixSq && !foundSuffixSq {
-				tempQuotedArg = args[i][1:]
-				tempQuotedArg = ""
-				bucket = append(bucket, tempQuotedArg)
-			} else if !foundPrefixSq && foundSuffixSq {
-				lArg := len(args[i])
-				tempQuotedArg = ""
-				bucket = append(bucket, args[i][0:lArg-1])
-			} else if foundPrefixSq && foundSuffixSq {
-				lArg := len(args[i])
-				bucket = append(bucket, args[i][1:lArg-1])
-			} else {
-				bucket = append(bucket, args[i])
-			}
+		default:
+			word.WriteRune(char)
+			wordStarted = true
 		}
 	}
 
-	var result []string
-	for _, item := range bucket {
-		result = append(result, strings.ReplaceAll(item, "'", ""))
+	if inSingleQuotes {
+		return "", nil, false, fmt.Errorf("unterminated single quote")
+	}
+	if wordStarted {
+		words = append(words, word.String())
+	}
+	if len(words) == 0 {
+		return "", nil, false, nil
 	}
 
-	_, ok := commandRegistry["builtin"][cmd]
-	isBuiltin = ok
-
-	return cmd, args, isBuiltin
+	cmd = words[0]
+	args = words[1:]
+	_, isBuiltin = commandRegistry["builtin"][cmd]
+	return cmd, args, isBuiltin, nil
 }
 
 func (s *shell) getExecutablePath(arg string) (string, error) {
@@ -162,7 +125,10 @@ func (s *shell) getExecutablePath(arg string) (string, error) {
 
 // Note: Orchestrator function, responsible for: extracting command from input, extracting values from input, routing to appropriate handler
 func (s *shell) handleInput(input string) error {
-	cmd, args, isBuiltin := s.parseShellInput(input)
+	cmd, args, isBuiltin, err := s.parseShellInput(input)
+	if err != nil {
+		return err
+	}
 
 	if isBuiltin {
 		switch cmd {
@@ -192,7 +158,8 @@ func (s *shell) handleTypeBuiltin(args []string) {
 		return
 	}
 
-	cmd, _, isBuiltin := s.parseShellInput(args[0])
+	cmd := args[0]
+	_, isBuiltin := commandRegistry["builtin"][cmd]
 	if !isBuiltin {
 		path, err := s.getExecutablePath(args[0])
 		if err != nil {
@@ -227,34 +194,7 @@ func (s *shell) handleNonBuiltin(cmd string, args []string) {
 }
 
 func (s *shell) handleEchoBuiltin(args []string) {
-	isOpening := false
-
-	// sanitizing the args first
-	var bucket []string
-	for _, item := range args {
-		hasPrefixSq := strings.HasPrefix(item, "'")
-		hasSuffixSq := strings.HasSuffix(item, "'")
-
-		if hasPrefixSq && hasSuffixSq {
-			bucket = append(bucket, strings.ReplaceAll(item, "'", ""))
-		} else if hasPrefixSq && !hasSuffixSq {
-			isOpening = true
-			bucket = append(bucket, strings.ReplaceAll(item, "'", ""))
-		} else if !hasPrefixSq && hasSuffixSq {
-			isOpening = false
-			bucket = append(bucket, strings.ReplaceAll(item, "'", ""))
-		} else {
-			if item == "" {
-				if isOpening {
-					bucket = append(bucket, item)
-				}
-			} else {
-				bucket = append(bucket, strings.ReplaceAll(item, "'", ""))
-			}
-		}
-	}
-
-	fmt.Printf("%s\n", strings.Join(bucket, " "))
+	fmt.Println(strings.Join(args, " "))
 }
 
 func (s *shell) handlePwdBuiltin() {
