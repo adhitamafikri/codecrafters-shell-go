@@ -21,6 +21,11 @@ func TestParseShellInput(t *testing.T) {
 		{input: "echo Playboi'Car'ti", cmd: "echo", args: []string{"PlayboiCarti"}},
 		{input: "echo ''", cmd: "echo", args: []string{""}},
 		{input: "echo 'hello     world'", cmd: "echo", args: []string{"hello     world"}},
+		{input: `echo "hello        world"`, cmd: "echo", args: []string{"hello        world"}},
+		{input: `echo "hello""world"`, cmd: "echo", args: []string{"helloworld"}},
+		{input: `echo "hello"world`, cmd: "echo", args: []string{"helloworld"}},
+		{input: `echo "hello" "world"`, cmd: "echo", args: []string{"hello", "world"}},
+		{input: `echo "shell's test"`, cmd: "echo", args: []string{"shell's test"}},
 	}
 
 	for _, test := range tests {
@@ -33,6 +38,13 @@ func TestParseShellInput(t *testing.T) {
 				t.Errorf("parseShellInput() = (%q, %#v), want (%q, %#v)", cmd, args, test.cmd, test.args)
 			}
 		})
+	}
+}
+
+func TestParseShellInputRejectsUnclosedDoubleQuote(t *testing.T) {
+	_, _, _, err := NewShell().parseShellInput(`echo "hello`)
+	if err == nil {
+		t.Fatal("parseShellInput() error = nil, want an error")
 	}
 }
 

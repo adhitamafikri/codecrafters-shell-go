@@ -78,14 +78,18 @@ func (s *shell) parseShellInput(input string) (cmd string, args []string, isBuil
 	var words []string
 	var word strings.Builder
 	inSingleQuotes := false
+	inDoubleQuotes := false
 	wordStarted := false
 
 	for _, char := range input {
 		switch {
-		case char == '\'':
+		case char == '\'' && !inDoubleQuotes:
 			inSingleQuotes = !inSingleQuotes
 			wordStarted = true
-		case unicode.IsSpace(char) && !inSingleQuotes:
+		case char == '"' && !inSingleQuotes:
+			inDoubleQuotes = !inDoubleQuotes
+			wordStarted = true
+		case unicode.IsSpace(char) && !inSingleQuotes && !inDoubleQuotes:
 			if wordStarted {
 				words = append(words, word.String())
 				word.Reset()
@@ -97,8 +101,11 @@ func (s *shell) parseShellInput(input string) (cmd string, args []string, isBuil
 		}
 	}
 
-	if inSingleQuotes {
-		return "", nil, false, fmt.Errorf("unterminated single quote")
+	if inSingleQuotes || inDoubleQuotes {
+		if inSingleQuotes {
+			return "", nil, false, fmt.Errorf("unterminated single quote")
+		}
+		return "", nil, false, fmt.Errorf("unterminated double quote")
 	}
 	if wordStarted {
 		words = append(words, word.String())
