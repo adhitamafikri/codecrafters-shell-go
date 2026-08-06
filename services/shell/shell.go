@@ -79,10 +79,21 @@ func (s *shell) parseShellInput(input string) (cmd string, args []string, isBuil
 	var word strings.Builder
 	inSingleQuotes := false
 	inDoubleQuotes := false
+	escapeNext := false
 	wordStarted := false
 
 	for _, char := range input {
+		if escapeNext {
+			word.WriteRune(char)
+			wordStarted = true
+			escapeNext = false
+			continue
+		}
+
 		switch {
+		case char == '\\' && !inSingleQuotes && !inDoubleQuotes:
+			escapeNext = true
+			wordStarted = true
 		case char == '\'' && !inDoubleQuotes:
 			inSingleQuotes = !inSingleQuotes
 			wordStarted = true
@@ -101,6 +112,9 @@ func (s *shell) parseShellInput(input string) (cmd string, args []string, isBuil
 		}
 	}
 
+	if escapeNext {
+		return "", nil, false, fmt.Errorf("unterminated escape")
+	}
 	if inSingleQuotes || inDoubleQuotes {
 		if inSingleQuotes {
 			return "", nil, false, fmt.Errorf("unterminated single quote")

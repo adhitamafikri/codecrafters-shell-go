@@ -26,6 +26,11 @@ func TestParseShellInput(t *testing.T) {
 		{input: `echo "hello"world`, cmd: "echo", args: []string{"helloworld"}},
 		{input: `echo "hello" "world"`, cmd: "echo", args: []string{"hello", "world"}},
 		{input: `echo "shell's test"`, cmd: "echo", args: []string{"shell's test"}},
+		{input: `echo something\ \ \ going on`, cmd: "echo", args: []string{"something   going", "on"}},
+		{input: `echo close\       far`, cmd: "echo", args: []string{"close ", "far"}},
+		{input: `echo test\nexample`, cmd: "echo", args: []string{"testnexample"}},
+		{input: `echo hello\\world`, cmd: "echo", args: []string{"hello\\world"}},
+		{input: `echo \'hello\'`, cmd: "echo", args: []string{"'hello'"}},
 	}
 
 	for _, test := range tests {
@@ -43,6 +48,13 @@ func TestParseShellInput(t *testing.T) {
 
 func TestParseShellInputRejectsUnclosedDoubleQuote(t *testing.T) {
 	_, _, _, err := NewShell().parseShellInput(`echo "hello`)
+	if err == nil {
+		t.Fatal("parseShellInput() error = nil, want an error")
+	}
+}
+
+func TestParseShellInputRejectsTrailingEscape(t *testing.T) {
+	_, _, _, err := NewShell().parseShellInput(`echo hello\`)
 	if err == nil {
 		t.Fatal("parseShellInput() error = nil, want an error")
 	}
